@@ -12,7 +12,7 @@ import {
 import { Article } from '../types';
 import AdminSidebar from '../components/AdminSidebar';
 import RichTextEditor from '../components/RichTextEditor';
-import { generateBlogPost } from '../services/aiService';
+import { generateBlogPost, regenerateImage, setApiKey } from '../services/aiService';
 
 // Stats Card Component
 const StatCard: React.FC<{
@@ -83,8 +83,10 @@ const Admin: React.FC = () => {
     // Image Editing State
     const [showImageEditor, setShowImageEditor] = useState(false);
     const [editingImageSrc, setEditingImageSrc] = useState<string | null>(null);
+    const [editingImageIndex, setEditingImageIndex] = useState<number | null>(null);
     const [imageEditPrompt, setImageEditPrompt] = useState('');
     const [isRegeneratingImage, setIsRegeneratingImage] = useState(false);
+    const [editingFeaturedImage, setEditingFeaturedImage] = useState(false);
 
     // SEO State
     const [seoScore, setSeoScore] = useState(0);
@@ -241,26 +243,76 @@ const Admin: React.FC = () => {
     };
 
     const handleUpdateImage = async () => {
-        if (!imageEditPrompt || !editingImageSrc) return;
+        if (!imageEditPrompt) return;
+        if (!apiKey) {
+            alert('Please enter your Gemini API Key first to use Nano Banana Pro image generation.');
+            setShowApiKeyInput(true);
+            return;
+        }
 
         setIsRegeneratingImage(true);
         try {
-            const { generateImage } = await import('../services/aiService');
-            const newImageUrl = await generateImage(imageEditPrompt);
+            // Use Nano Banana Pro for image generation
+            const newImageUrl = await regenerateImage(imageEditPrompt, apiKey);
 
-            if (currentPost.imageUrl === editingImageSrc) {
+            if (editingFeaturedImage) {
+                // Update featured image
                 setCurrentPost(prev => ({ ...prev, imageUrl: newImageUrl }));
-            } else {
+            } else if (editingImageSrc) {
+                // Update inline image in content
                 const newContent = currentPost.content?.replace(editingImageSrc, newImageUrl);
                 setCurrentPost(prev => ({ ...prev, content: newContent }));
             }
 
             setShowImageEditor(false);
             setEditingImageSrc(null);
+            setEditingImageIndex(null);
+            setEditingFeaturedImage(false);
             setImageEditPrompt('');
         } catch (error) {
-            console.error("Failed to regenerate image", error);
-            alert("Failed to regenerate image");
+            console.error("Failed to regenerate image with Nano Banana Pro", error);
+            const errorMsg = error instanceof Error ? error.message : "Unknown error";
+            alert(`Failed to regenerate image: ${errorMsg}`);
+        } finally {
+            setIsRegeneratingImage(false);
+        }
+    };
+
+    // Handle clicking on an image in the content to edit it
+    const handleImageClick = (imageSrc: string, prompt?: string, index?: number) => {
+        setEditingImageSrc(imageSrc);
+        setEditingImageIndex(index ?? null);
+        setEditingFeaturedImage(false);
+        setImageEditPrompt(prompt || '');
+        setShowImageEditor(true);
+    };
+
+    // Handle clicking on featured image to edit it
+    const handleFeaturedImageEdit = () => {
+        setEditingImageSrc(currentPost.imageUrl || null);
+        setEditingFeaturedImage(true);
+        setEditingImageIndex(null);
+        setImageEditPrompt(`Featured image for article about ${currentPost.title || 'technology'}`);
+        setShowImageEditor(true);
+    };
+
+    // Generate a new featured image with Nano Banana Pro
+    const handleGenerateFeaturedImage = async () => {
+        if (!apiKey) {
+            alert('Please enter your Gemini API Key first.');
+            setShowApiKeyInput(true);
+            return;
+        }
+
+        setIsRegeneratingImage(true);
+        try {
+            const prompt = `Hero image for tech blog article about ${currentPost.title || 'technology'}, futuristic, cinematic, professional photography style`;
+            const newImageUrl = await regenerateImage(prompt, apiKey);
+            setCurrentPost(prev => ({ ...prev, imageUrl: newImageUrl }));
+        } catch (error) {
+            console.error("Failed to generate featured image", error);
+            const errorMsg = error instanceof Error ? error.message : "Unknown error";
+            alert(`Failed to generate image: ${errorMsg}`);
         } finally {
             setIsRegeneratingImage(false);
         }
@@ -277,49 +329,101 @@ const Admin: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-dark-950 pt-20">
-            {/* Image Editor Modal */}
+            {/* Nano Banana Pro Image Editor Modal */}
             {showImageEditor && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                     <div className="absolute inset-0 bg-dark-950/90 backdrop-blur-sm" onClick={() => setShowImageEditor(false)} />
-                    <div className="relative glass rounded-2xl p-6 w-full max-w-md animate-scale-in">
+                    <div className="relative glass rounded-2xl p-6 w-full max-w-lg animate-scale-in">
                         <div className="flex justify-between items-center mb-6">
                             <h4 className="text-lg font-display font-bold text-white flex items-center gap-2">
-                                <Wand2 className="h-5 w-5 text-primary-400" />
-                                AI Image Generator
+                                <span className="text-2xl">🍌</span>
+                                Nano Banana Pro
                             </h4>
                             <button onClick={() => setShowImageEditor(false)} className="p-2 rounded-lg hover:bg-white/10 text-dark-400 hover:text-white transition-colors">
                                 <X className="h-5 w-5" />
                             </button>
                         </div>
 
-                        <div className="mb-6">
-                            <img src={editingImageSrc || ''} alt="Preview" className="w-full h-48 object-cover rounded-xl opacity-50" />
-                            <p className="text-xs text-center text-dark-500 mt-2">Current Image</p>
+                        {/* Model Info */}
+                        <div className="mb-4 p-3 rounded-xl bg-primary-500/10 border border-primary-500/20">
+                            <div className="flex items-center gap-2 text-sm">
+                                <span className="text-primary-400 font-medium">Model:</span>
+                                <code className="text-xs bg-dark-800 px-2 py-1 rounded text-accent-cyan font-mono">gemini-3-pro-image-preview</code>
+                            </div>
+                            <p className="text-xs text-dark-400 mt-1">State-of-the-art image generation and editing</p>
                         </div>
 
-                        <textarea
-                            value={imageEditPrompt}
-                            onChange={(e) => setImageEditPrompt(e.target.value)}
-                            placeholder="Describe the new image you want..."
-                            className="w-full input-glass rounded-xl p-4 text-white mb-4 resize-none"
-                            rows={3}
-                            autoFocus
-                        />
+                        {/* Current Image Preview */}
+                        {editingImageSrc && (
+                            <div className="mb-6">
+                                <img src={editingImageSrc} alt="Current" className="w-full h-48 object-cover rounded-xl border border-white/10" />
+                                <p className="text-xs text-center text-dark-500 mt-2">
+                                    {editingFeaturedImage ? 'Current Featured Image' : `Inline Image ${editingImageIndex !== null ? editingImageIndex + 1 : ''}`}
+                                </p>
+                            </div>
+                        )}
 
+                        {/* Prompt Input */}
+                        <div className="mb-4">
+                            <label className="block text-xs font-medium text-dark-400 mb-2">Image Description</label>
+                            <textarea
+                                value={imageEditPrompt}
+                                onChange={(e) => setImageEditPrompt(e.target.value)}
+                                placeholder="Describe the image you want Nano Banana Pro to generate..."
+                                className="w-full input-glass rounded-xl p-4 text-white resize-none"
+                                rows={4}
+                                autoFocus
+                            />
+                            <p className="text-xs text-dark-600 mt-2">
+                                Tip: Be specific about style, colors, composition, and mood for best results.
+                            </p>
+                        </div>
+
+                        {/* Quick Prompts */}
+                        <div className="mb-6">
+                            <label className="block text-xs font-medium text-dark-400 mb-2">Quick Styles</label>
+                            <div className="flex flex-wrap gap-2">
+                                {['Futuristic', 'Minimalist', 'Cinematic', 'Abstract', 'Professional'].map((style) => (
+                                    <button
+                                        key={style}
+                                        onClick={() => setImageEditPrompt(prev => `${prev} ${style.toLowerCase()} style`.trim())}
+                                        className="px-3 py-1.5 rounded-lg glass text-xs text-dark-300 hover:text-white hover:bg-white/10 transition-colors"
+                                    >
+                                        {style}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Actions */}
                         <div className="flex justify-end gap-3">
                             <button
-                                onClick={() => setShowImageEditor(false)}
+                                onClick={() => {
+                                    setShowImageEditor(false);
+                                    setEditingImageSrc(null);
+                                    setEditingFeaturedImage(false);
+                                    setImageEditPrompt('');
+                                }}
                                 className="px-4 py-2.5 text-dark-400 hover:text-white transition-colors"
                             >
                                 Cancel
                             </button>
                             <button
                                 onClick={handleUpdateImage}
-                                disabled={isRegeneratingImage}
+                                disabled={isRegeneratingImage || !imageEditPrompt.trim()}
                                 className="btn-primary text-white px-6 py-2.5 rounded-xl font-semibold flex items-center gap-2 disabled:opacity-50"
                             >
-                                {isRegeneratingImage ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-                                {isRegeneratingImage ? 'Generating...' : 'Generate'}
+                                {isRegeneratingImage ? (
+                                    <>
+                                        <Loader2 className="h-4 w-4 animate-spin" />
+                                        Generating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>🍌</span>
+                                        Generate with Nano Banana
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>
@@ -483,9 +587,26 @@ const Admin: React.FC = () => {
                                                 type="text"
                                                 value={currentPost.imageUrl}
                                                 onChange={(e) => setCurrentPost({ ...currentPost, imageUrl: e.target.value })}
-                                                placeholder="Image URL..."
+                                                placeholder="Image URL or generate with AI..."
                                                 className="flex-1 input-glass rounded-xl px-4 py-3 text-white text-sm"
                                             />
+                                            <button
+                                                onClick={handleGenerateFeaturedImage}
+                                                disabled={isRegeneratingImage}
+                                                className="p-3 rounded-xl btn-primary text-white transition-colors flex items-center gap-1"
+                                                title="Generate with Nano Banana Pro"
+                                            >
+                                                {isRegeneratingImage ? <Loader2 className="h-5 w-5 animate-spin" /> : <span>🍌</span>}
+                                            </button>
+                                            {currentPost.imageUrl && (
+                                                <button
+                                                    onClick={handleFeaturedImageEdit}
+                                                    className="p-3 rounded-xl glass text-dark-400 hover:text-white transition-colors"
+                                                    title="Edit featured image"
+                                                >
+                                                    <Wand2 className="h-5 w-5" />
+                                                </button>
+                                            )}
                                             <label className="p-3 rounded-xl glass text-dark-400 hover:text-white cursor-pointer transition-colors">
                                                 <ImageIcon className="h-5 w-5" />
                                                 <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
