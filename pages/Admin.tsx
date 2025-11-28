@@ -154,8 +154,7 @@ const Admin: React.FC = () => {
             }));
         } catch (error) {
             console.error("AI Generation failed", error);
-            const errorMessage = error instanceof Error ? error.message : "Unknown error";
-            alert(`Failed to generate content: ${errorMessage}\n\nCheck the browser console for more details.`);
+            alert("Failed to generate content. Please check your API Key and try again.");
         } finally {
             setIsGenerating(false);
         }

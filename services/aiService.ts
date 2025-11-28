@@ -1,4 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Helper to generate a real AI image URL using Pollinations.ai (free, no key needed)
 const getAIImage = (prompt: string) => `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1200&height=600&nologo=true`;
@@ -6,104 +6,39 @@ const getAIImage = (prompt: string) => `https://image.pollinations.ai/prompt/${e
 export const generateBlogPost = async (topic: string, apiKey?: string) => {
     if (apiKey) {
         try {
-            const genAI = new GoogleGenAI({ apiKey });
-            const model = "gemini-3-pro-preview";
+            const genAI = new GoogleGenerativeAI(apiKey);
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
-            const prompt = `You are a professional tech journalist. Create a comprehensive blog post about "${topic}".
-
-Return ONLY a valid JSON object with this EXACT structure (no markdown, no code blocks):
-{
-    "title": "An engaging, SEO-optimized title",
-    "category": "Technology",
-    "excerpt": "A compelling 2-3 sentence summary",
-    "tags": ["tag1", "tag2", "tag3"],
-    "content": "Full HTML content goes here..."
-}
-
-CRITICAL REQUIREMENTS for the "content" field:
-
-1. Write 5-8 detailed paragraphs with proper HTML formatting
-2. Use <h2> for main sections (3-5 sections)
-3. Use <h3> for subsections
-4. Use <p> tags for ALL paragraphs
-5. Use <strong> for key terms
-6. Use <ul>/<li> for bullet lists
-7. Use <blockquote> for important quotes or takeaways
-8. The content MUST be substantial - at least 800 words
-
-Do NOT include any images in the content - we will handle images separately.
-Focus on creating rich, informative text content with proper HTML structure.
-
-Example structure:
-<p>Introduction paragraph...</p>
-<h2>First Main Topic</h2>
-<p>Detailed explanation...</p>
-<ul><li>Point one</li><li>Point two</li></ul>
-<h2>Second Main Topic</h2>
-<p>More details...</p>
-<blockquote>Key insight or quote</blockquote>`;
-
-            const response = await genAI.models.generateContent({
-                model: model,
-                contents: prompt,
-                config: {
-                    responseMimeType: 'application/json'
+            const prompt = `
+                Generate a professional, engaging tech blog post about "${topic}".
+                
+                Return ONLY a valid JSON object (no markdown formatting) with the following structure:
+                {
+                    "title": "Catchy Title",
+                    "category": "Technology/AI/Innovation",
+                    "excerpt": "Brief summary (2 sentences)",
+                    "tags": ["tag1", "tag2", "tag3"],
+                    "content": "HTML string..."
                 }
-            });
 
-            console.log("Raw API Response:", response);
-            console.log("Response structure:", JSON.stringify(response, null, 2));
+                For the "content" field:
+                1. Use rich HTML5 tags: <h2>, <h3>, <p>, <ul>/<li>, <blockquote>.
+                2. Style elements with Tailwind CSS classes suitable for a dark mode tech blog (e.g., text-gray-300, text-white, border-primary).
+                3. Include at least 3 images using <figure> tags.
+                4. For image src, use this EXACT format: https://image.pollinations.ai/prompt/ENCODED_PROMPT?width=1200&height=600&nologo=true
+                   Replace ENCODED_PROMPT with a URL-encoded description of the image.
+                5. Add a <figcaption> for each image crediting 'NanoBanana Pro'.
+                6. Make the content long, detailed, and professional.
+            `;
 
-            // The @google/genai package returns response.text as a string directly
-            let text = response.text;
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            const text = response.text();
 
-            // If text is undefined, try different properties
-            if (!text) {
-                console.log("response.text is undefined, checking alternatives...");
-                console.log("response keys:", Object.keys(response));
+            // Clean up markdown code blocks if present
+            const jsonString = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
-                // Try to access the text from candidates
-                if (response.candidates && response.candidates[0]?.content?.parts?.[0]?.text) {
-                    text = response.candidates[0].content.parts[0].text;
-                    console.log("Found text in candidates:", text);
-                }
-            }
-
-            if (!text) {
-                console.error("Full response object:", response);
-                throw new Error("No content generated from API - check console for response structure");
-            }
-
-            console.log("Response text:", text);
-
-            const data = JSON.parse(text);
-            console.log("Parsed data:", data);
-
-            // Validate that we have all required fields
-            if (!data.title) {
-                console.error("Missing title in response");
-                throw new Error("API response missing title field");
-            }
-            if (!data.content) {
-                console.error("Missing content in response");
-                throw new Error("API response missing content field");
-            }
-            if (!data.excerpt) {
-                console.warn("Missing excerpt in response, will use empty string");
-                data.excerpt = "";
-            }
-            if (!data.category) {
-                console.warn("Missing category in response, defaulting to Technology");
-                data.category = "Technology";
-            }
-            if (!data.tags || !Array.isArray(data.tags)) {
-                console.warn("Missing or invalid tags in response, using default");
-                data.tags = [topic, "Technology", "Innovation"];
-            }
-
-            console.log("Validated data - Title:", data.title);
-            console.log("Validated data - Content length:", data.content?.length || 0);
-            console.log("Validated data - Excerpt:", data.excerpt);
+            const data = JSON.parse(jsonString);
 
             // Generate a featured image based on the title
             const featuredImageUrl = getAIImage(`futuristic ${topic} concept art, cinematic lighting, 8k`);
@@ -115,10 +50,6 @@ Example structure:
 
         } catch (error) {
             console.error("Gemini API Error:", error);
-            // Provide more detailed error message
-            if (error instanceof Error) {
-                throw new Error(`Gemini API Error: ${error.message}`);
-            }
             throw new Error("Failed to generate content with Gemini API");
         }
     }

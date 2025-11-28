@@ -1,13 +1,13 @@
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const getClient = (apiKey: string) => new GoogleGenAI({ apiKey });
+const getClient = (apiKey: string) => new GoogleGenerativeAI(apiKey);
 
 export const generateBlogPost = async (apiKey: string, topic: string): Promise<{ title: string; content: string; category: string; excerpt: string }> => {
   if (!apiKey) throw new Error("API Key is required");
 
   try {
     const ai = getClient(apiKey);
-    const model = 'gemini-2.0-flash';
+    const model = 'gemini-1.5-pro';
 
     const prompt = `You are a professional tech journalist writing for a premium tech publication. Write a comprehensive, well-structured blog post about: "${topic}".
 
@@ -42,15 +42,13 @@ Structure the article like a professional blog post with:
 Do NOT include the main title as <h1> in the content (it's already in the title field).
 Start directly with the introduction paragraph, then use <h2> for your first section.`;
 
-    const response = await ai.models.generateContent({
+    const genModel = ai.getGenerativeModel({
       model: model,
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json'
-      }
+      generationConfig: { responseMimeType: 'application/json' }
     });
 
-    const text = response.text;
+    const result = await genModel.generateContent(prompt);
+    const text = result.response.text();
     if (!text) throw new Error("No content generated");
 
     return JSON.parse(text);
@@ -92,15 +90,13 @@ export const generateSummary = async (apiKey: string, text: string): Promise<str
 
   try {
     const ai = getClient(apiKey);
-    const model = 'gemini-2.0-flash';
+    const model = 'gemini-1.5-pro';
     const prompt = `You are a tech news editor. Summarize the following article content into a concise, 2-sentence hook that excites a tech-savvy audience. Content: ${text}`;
 
-    const response = await ai.models.generateContent({
-      model: model,
-      contents: prompt,
-    });
+    const genModel = ai.getGenerativeModel({ model: model });
+    const result = await genModel.generateContent(prompt);
 
-    return response.text || "Could not generate summary.";
+    return result.response.text() || "Could not generate summary.";
   } catch (error) {
     console.error("Gemini API Error:", error);
     return "An error occurred while contacting the AI service.";
@@ -112,15 +108,13 @@ export const askAIQuestion = async (apiKey: string, context: string, question: s
 
   try {
     const ai = getClient(apiKey);
-    const model = 'gemini-2.0-flash';
+    const model = 'gemini-1.5-pro';
     const prompt = `Context: ${context}\n\nUser Question: ${question}\n\nAnswer the user's question based on the context provided. Keep it brief and informative.`;
 
-    const response = await ai.models.generateContent({
-      model: model,
-      contents: prompt,
-    });
+    const genModel = ai.getGenerativeModel({ model: model });
+    const result = await genModel.generateContent(prompt);
 
-    return response.text || "No answer generated.";
+    return result.response.text() || "No answer generated.";
   } catch (error) {
     console.error("Gemini API Error:", error);
     return "Error getting answer.";
