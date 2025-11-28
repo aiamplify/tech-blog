@@ -7,7 +7,7 @@ export const generateBlogPost = async (topic: string, apiKey?: string) => {
     if (apiKey) {
         try {
             const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+            const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
 
             const prompt = `
                 Generate a professional, engaging tech blog post about "${topic}".
@@ -35,10 +35,15 @@ export const generateBlogPost = async (topic: string, apiKey?: string) => {
             const response = await result.response;
             const text = response.text();
 
+            console.log("Raw API Response:", text);
+
             // Clean up markdown code blocks if present
             const jsonString = text.replace(/```json/g, '').replace(/```/g, '').trim();
 
+            console.log("Cleaned JSON string:", jsonString);
+
             const data = JSON.parse(jsonString);
+            console.log("Parsed data:", data);
 
             // Generate a featured image based on the title
             const featuredImageUrl = getAIImage(`futuristic ${topic} concept art, cinematic lighting, 8k`);
@@ -50,6 +55,10 @@ export const generateBlogPost = async (topic: string, apiKey?: string) => {
 
         } catch (error) {
             console.error("Gemini API Error:", error);
+            // Provide more detailed error message
+            if (error instanceof Error) {
+                throw new Error(`Gemini API Error: ${error.message}`);
+            }
             throw new Error("Failed to generate content with Gemini API");
         }
     }
