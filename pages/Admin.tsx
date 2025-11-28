@@ -12,7 +12,7 @@ import {
 import { Article } from '../types';
 import AdminSidebar from '../components/AdminSidebar';
 import RichTextEditor from '../components/RichTextEditor';
-import { generateBlogPost, regenerateImage, setApiKey } from '../services/aiService';
+import { generateBlogPost, regenerateImage, editImageWithNanoBanana, setApiKey } from '../services/aiService';
 
 // Stats Card Component
 const StatCard: React.FC<{
@@ -87,6 +87,7 @@ const Admin: React.FC = () => {
     const [imageEditPrompt, setImageEditPrompt] = useState('');
     const [isRegeneratingImage, setIsRegeneratingImage] = useState(false);
     const [editingFeaturedImage, setEditingFeaturedImage] = useState(false);
+    const [imageEditMode, setImageEditMode] = useState<'generate' | 'edit'>('edit'); // 'generate' = new image, 'edit' = modify existing
 
     // SEO State
     const [seoScore, setSeoScore] = useState(0);
@@ -252,8 +253,18 @@ const Admin: React.FC = () => {
 
         setIsRegeneratingImage(true);
         try {
-            // Use Nano Banana Pro for image generation
-            const newImageUrl = await regenerateImage(imageEditPrompt, apiKey);
+            let newImageUrl: string;
+
+            // Check if we're editing an existing image or generating a new one
+            if (imageEditMode === 'edit' && editingImageSrc) {
+                // Edit existing image with Nano Banana Pro
+                console.log("✏️ Editing existing image with instructions:", imageEditPrompt);
+                newImageUrl = await editImageWithNanoBanana(editingImageSrc, imageEditPrompt, apiKey);
+            } else {
+                // Generate a completely new image
+                console.log("🎨 Generating new image with prompt:", imageEditPrompt);
+                newImageUrl = await regenerateImage(imageEditPrompt, apiKey);
+            }
 
             if (editingFeaturedImage) {
                 // Update featured image
@@ -269,10 +280,11 @@ const Admin: React.FC = () => {
             setEditingImageIndex(null);
             setEditingFeaturedImage(false);
             setImageEditPrompt('');
+            setImageEditMode('edit');
         } catch (error) {
-            console.error("Failed to regenerate image with Nano Banana Pro", error);
+            console.error("Failed to process image with Nano Banana Pro", error);
             const errorMsg = error instanceof Error ? error.message : "Unknown error";
-            alert(`Failed to regenerate image: ${errorMsg}`);
+            alert(`Failed to process image: ${errorMsg}`);
         } finally {
             setIsRegeneratingImage(false);
         }
@@ -337,7 +349,7 @@ const Admin: React.FC = () => {
                         <div className="flex justify-between items-center mb-6">
                             <h4 className="text-lg font-display font-bold text-white flex items-center gap-2">
                                 <span className="text-2xl">🍌</span>
-                                Nano Banana Pro
+                                Nano Banana Pro Image Editor
                             </h4>
                             <button onClick={() => setShowImageEditor(false)} className="p-2 rounded-lg hover:bg-white/10 text-dark-400 hover:text-white transition-colors">
                                 <X className="h-5 w-5" />
@@ -353,47 +365,116 @@ const Admin: React.FC = () => {
                             <p className="text-xs text-dark-400 mt-1">State-of-the-art image generation and editing</p>
                         </div>
 
+                        {/* Mode Toggle - Edit vs Generate New */}
+                        {editingImageSrc && (
+                            <div className="mb-4">
+                                <label className="block text-xs font-medium text-dark-400 mb-2">Mode</label>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => setImageEditMode('edit')}
+                                        className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                                            imageEditMode === 'edit'
+                                                ? 'bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/30'
+                                                : 'glass text-dark-400 hover:text-white'
+                                        }`}
+                                    >
+                                        ✏️ Edit This Image
+                                    </button>
+                                    <button
+                                        onClick={() => setImageEditMode('generate')}
+                                        className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                                            imageEditMode === 'generate'
+                                                ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
+                                                : 'glass text-dark-400 hover:text-white'
+                                        }`}
+                                    >
+                                        🎨 Generate New
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Current Image Preview */}
                         {editingImageSrc && (
                             <div className="mb-6">
                                 <img src={editingImageSrc} alt="Current" className="w-full h-48 object-cover rounded-xl border border-white/10" />
                                 <p className="text-xs text-center text-dark-500 mt-2">
                                     {editingFeaturedImage ? 'Current Featured Image' : `Inline Image ${editingImageIndex !== null ? editingImageIndex + 1 : ''}`}
+                                    {imageEditMode === 'edit' && <span className="text-accent-cyan ml-2">• Edit mode</span>}
                                 </p>
                             </div>
                         )}
 
                         {/* Prompt Input */}
                         <div className="mb-4">
-                            <label className="block text-xs font-medium text-dark-400 mb-2">Image Description</label>
+                            <label className="block text-xs font-medium text-dark-400 mb-2">
+                                {imageEditMode === 'edit' && editingImageSrc
+                                    ? '✏️ What would you like to change?'
+                                    : '🎨 Describe the image you want'}
+                            </label>
                             <textarea
                                 value={imageEditPrompt}
                                 onChange={(e) => setImageEditPrompt(e.target.value)}
-                                placeholder="Describe the image you want Nano Banana Pro to generate..."
+                                placeholder={imageEditMode === 'edit' && editingImageSrc
+                                    ? "e.g., 'Make the background blue', 'Add more contrast', 'Remove the text', 'Make it more futuristic'..."
+                                    : "Describe the image you want Nano Banana Pro to generate..."
+                                }
                                 className="w-full input-glass rounded-xl p-4 text-white resize-none"
                                 rows={4}
                                 autoFocus
                             />
                             <p className="text-xs text-dark-600 mt-2">
-                                Tip: Be specific about style, colors, composition, and mood for best results.
+                                {imageEditMode === 'edit' && editingImageSrc
+                                    ? "Tip: Describe what you want to change about the current image. Be specific!"
+                                    : "Tip: Be specific about style, colors, composition, and mood for best results."
+                                }
                             </p>
                         </div>
 
-                        {/* Quick Prompts */}
-                        <div className="mb-6">
-                            <label className="block text-xs font-medium text-dark-400 mb-2">Quick Styles</label>
-                            <div className="flex flex-wrap gap-2">
-                                {['Futuristic', 'Minimalist', 'Cinematic', 'Abstract', 'Professional'].map((style) => (
-                                    <button
-                                        key={style}
-                                        onClick={() => setImageEditPrompt(prev => `${prev} ${style.toLowerCase()} style`.trim())}
-                                        className="px-3 py-1.5 rounded-lg glass text-xs text-dark-300 hover:text-white hover:bg-white/10 transition-colors"
-                                    >
-                                        {style}
-                                    </button>
-                                ))}
+                        {/* Quick Edit Suggestions (for edit mode) */}
+                        {imageEditMode === 'edit' && editingImageSrc && (
+                            <div className="mb-4">
+                                <label className="block text-xs font-medium text-dark-400 mb-2">Quick Edits</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {[
+                                        'Make it brighter',
+                                        'Add more contrast',
+                                        'Make it more colorful',
+                                        'Make it darker/moodier',
+                                        'Add a blue tint',
+                                        'Make it more futuristic',
+                                        'Simplify the background',
+                                        'Add tech elements'
+                                    ].map((edit) => (
+                                        <button
+                                            key={edit}
+                                            onClick={() => setImageEditPrompt(edit)}
+                                            className="px-3 py-1.5 rounded-lg glass text-xs text-dark-300 hover:text-white hover:bg-white/10 transition-colors"
+                                        >
+                                            {edit}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
+                        )}
+
+                        {/* Quick Styles (for generate mode) */}
+                        {(imageEditMode === 'generate' || !editingImageSrc) && (
+                            <div className="mb-6">
+                                <label className="block text-xs font-medium text-dark-400 mb-2">Quick Styles</label>
+                                <div className="flex flex-wrap gap-2">
+                                    {['Futuristic', 'Minimalist', 'Cinematic', 'Abstract', 'Professional'].map((style) => (
+                                        <button
+                                            key={style}
+                                            onClick={() => setImageEditPrompt(prev => `${prev} ${style.toLowerCase()} style`.trim())}
+                                            className="px-3 py-1.5 rounded-lg glass text-xs text-dark-300 hover:text-white hover:bg-white/10 transition-colors"
+                                        >
+                                            {style}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
 
                         {/* Actions */}
                         <div className="flex justify-end gap-3">
@@ -403,6 +484,7 @@ const Admin: React.FC = () => {
                                     setEditingImageSrc(null);
                                     setEditingFeaturedImage(false);
                                     setImageEditPrompt('');
+                                    setImageEditMode('edit');
                                 }}
                                 className="px-4 py-2.5 text-dark-400 hover:text-white transition-colors"
                             >
@@ -416,12 +498,12 @@ const Admin: React.FC = () => {
                                 {isRegeneratingImage ? (
                                     <>
                                         <Loader2 className="h-4 w-4 animate-spin" />
-                                        Generating...
+                                        {imageEditMode === 'edit' && editingImageSrc ? 'Editing...' : 'Generating...'}
                                     </>
                                 ) : (
                                     <>
                                         <span>🍌</span>
-                                        Generate with Nano Banana
+                                        {imageEditMode === 'edit' && editingImageSrc ? 'Apply Edit' : 'Generate Image'}
                                     </>
                                 )}
                             </button>
@@ -774,17 +856,30 @@ const Admin: React.FC = () => {
 
                                 <div className="flex-1 overflow-y-auto p-6">
                                     <div className={`mx-auto bg-dark-950 rounded-2xl overflow-hidden shadow-2xl ${previewMode === 'mobile' ? 'max-w-[375px]' : 'w-full'}`}>
-                                        {/* Preview Header Image */}
-                                        <div className="relative h-48 bg-dark-800">
+                                        {/* Preview Header Image - Clickable to edit */}
+                                        <div
+                                            className="relative h-48 bg-dark-800 group cursor-pointer"
+                                            onClick={() => currentPost.imageUrl && handleFeaturedImageEdit()}
+                                            title={currentPost.imageUrl ? "Click to edit this image" : ""}
+                                        >
                                             {currentPost.imageUrl ? (
-                                                <img src={currentPost.imageUrl} alt="Cover" className="w-full h-full object-cover" />
+                                                <>
+                                                    <img src={currentPost.imageUrl} alt="Cover" className="w-full h-full object-cover" />
+                                                    {/* Edit overlay */}
+                                                    <div className="absolute inset-0 bg-dark-950/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                        <div className="bg-dark-900/90 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/20 flex items-center gap-2">
+                                                            <span className="text-lg">🍌</span>
+                                                            <span className="text-white text-sm font-medium">Click to Edit Image</span>
+                                                        </div>
+                                                    </div>
+                                                </>
                                             ) : (
                                                 <div className="w-full h-full flex items-center justify-center text-dark-600">
                                                     <ImageIcon className="h-12 w-12" />
                                                 </div>
                                             )}
-                                            <div className="absolute inset-0 bg-gradient-to-t from-dark-950 to-transparent" />
-                                            <div className="absolute bottom-4 left-4 right-4">
+                                            <div className="absolute inset-0 bg-gradient-to-t from-dark-950 to-transparent pointer-events-none" />
+                                            <div className="absolute bottom-4 left-4 right-4 pointer-events-none">
                                                 <span className="text-xs font-semibold text-primary-400 uppercase tracking-wider">
                                                     {currentPost.category}
                                                 </span>
@@ -794,7 +889,7 @@ const Admin: React.FC = () => {
                                             </div>
                                         </div>
 
-                                        {/* Preview Content */}
+                                        {/* Preview Content - with clickable images */}
                                         <div className="p-6">
                                             <div className="flex items-center gap-3 mb-4 text-xs text-dark-500">
                                                 <span>{currentPost.date}</span>
@@ -809,7 +904,19 @@ const Admin: React.FC = () => {
                                             )}
 
                                             <div
-                                                className="prose-custom text-sm"
+                                                className="prose-custom text-sm preview-content-clickable"
+                                                onClick={(e) => {
+                                                    // Check if clicked on an image
+                                                    const target = e.target as HTMLElement;
+                                                    if (target.tagName === 'IMG') {
+                                                        const imgSrc = (target as HTMLImageElement).src;
+                                                        const figure = target.closest('figure');
+                                                        const prompt = figure?.getAttribute('data-prompt') || '';
+                                                        const indexStr = figure?.getAttribute('data-image-index');
+                                                        const index = indexStr ? parseInt(indexStr) : undefined;
+                                                        handleImageClick(imgSrc, prompt, index);
+                                                    }
+                                                }}
                                                 dangerouslySetInnerHTML={{ __html: currentPost.content || '<p class="text-dark-600">Start writing to see your content here...</p>' }}
                                             />
                                         </div>

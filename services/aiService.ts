@@ -249,6 +249,86 @@ export const regenerateImage = async (prompt: string, apiKey?: string): Promise<
     return await generateImageWithNanoBanana(prompt, key);
 };
 
+// Edit an existing image using Nano Banana Pro
+// This sends the existing image along with edit instructions
+export const editImageWithNanoBanana = async (
+    existingImageBase64: string,
+    editInstructions: string,
+    apiKey?: string
+): Promise<string> => {
+    const key = apiKey || globalApiKey;
+    
+    if (!key) {
+        throw new Error("API Key is required for Nano Banana Pro image editing");
+    }
+
+    try {
+        const genAI = new GoogleGenAI({ apiKey: key });
+        
+        console.log("✏️ Editing image with Nano Banana Pro...");
+        console.log("📝 Edit instructions:", editInstructions);
+
+        // Extract base64 data from data URL if present
+        let imageData = existingImageBase64;
+        let mimeType = 'image/png';
+        
+        if (existingImageBase64.startsWith('data:')) {
+            const matches = existingImageBase64.match(/^data:([^;]+);base64,(.+)$/);
+            if (matches) {
+                mimeType = matches[1];
+                imageData = matches[2];
+            }
+        }
+
+        // Create the edit prompt
+        const editPrompt = `Edit this image according to these instructions: ${editInstructions}.
+        Maintain the overall composition and style while applying the requested changes.
+        Output a high-quality edited version of the image.`;
+
+        // Send the image along with edit instructions
+        const response = await genAI.models.generateContent({
+            model: NANO_BANANA_PRO_MODEL,
+            contents: [
+                {
+                    role: "user",
+                    parts: [
+                        {
+                            inlineData: {
+                                mimeType: mimeType,
+                                data: imageData
+                            }
+                        },
+                        {
+                            text: editPrompt
+                        }
+                    ]
+                }
+            ],
+            config: {
+                responseModalities: ["image", "text"],
+            }
+        });
+
+        // Extract edited image from response
+        if (response.candidates && response.candidates[0]?.content?.parts) {
+            for (const part of response.candidates[0].content.parts) {
+                if (part.inlineData && part.inlineData.data) {
+                    // Return as base64 data URL
+                    const responseMimeType = part.inlineData.mimeType || 'image/png';
+                    const base64Image = `data:${responseMimeType};base64,${part.inlineData.data}`;
+                    console.log("✅ Image edited successfully with Nano Banana Pro");
+                    return base64Image;
+                }
+            }
+        }
+
+        throw new Error("No edited image data in response");
+    } catch (error) {
+        console.error("❌ Nano Banana Pro Edit Error:", error);
+        throw error;
+    }
+};
+
 // Legacy export for compatibility
 export const generateImage = async (prompt: string, apiKey?: string): Promise<string> => {
     return regenerateImage(prompt, apiKey);
