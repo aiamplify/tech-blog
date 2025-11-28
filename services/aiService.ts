@@ -7,7 +7,7 @@ export const generateBlogPost = async (topic: string, apiKey?: string) => {
     if (apiKey) {
         try {
             const genAI = new GoogleGenAI({ apiKey });
-            const model = "gemini-1.5-pro";
+            const model = "models/gemini-3-pro-preview";
 
             const prompt = `You are a professional tech journalist. Create a comprehensive blog post about "${topic}".
 
