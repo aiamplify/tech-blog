@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 
 // Helper to generate a real AI image URL using Pollinations.ai (free, no key needed)
 const getAIImage = (prompt: string) => `https://image.pollinations.ai/prompt/${encodeURIComponent(prompt)}?width=1200&height=600&nologo=true`;
@@ -6,43 +6,45 @@ const getAIImage = (prompt: string) => `https://image.pollinations.ai/prompt/${e
 export const generateBlogPost = async (topic: string, apiKey?: string) => {
     if (apiKey) {
         try {
-            const genAI = new GoogleGenerativeAI(apiKey);
-            const model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+            const genAI = new GoogleGenAI({ apiKey });
+            const model = "gemini-2.0-flash-exp";
 
-            const prompt = `
-                Generate a professional, engaging tech blog post about "${topic}".
-                
-                Return ONLY a valid JSON object (no markdown formatting) with the following structure:
-                {
-                    "title": "Catchy Title",
-                    "category": "Technology/AI/Innovation",
-                    "excerpt": "Brief summary (2 sentences)",
-                    "tags": ["tag1", "tag2", "tag3"],
-                    "content": "HTML string..."
+            const prompt = `Generate a professional, engaging tech blog post about "${topic}".
+
+Return a JSON object with the following structure:
+{
+    "title": "Catchy Title",
+    "category": "Technology/AI/Innovation",
+    "excerpt": "Brief summary (2 sentences)",
+    "tags": ["tag1", "tag2", "tag3"],
+    "content": "HTML string..."
+}
+
+For the "content" field:
+1. Use rich HTML5 tags: <h2>, <h3>, <p>, <ul>/<li>, <blockquote>.
+2. Include at least 3 images using <figure> tags.
+3. For image src, use this EXACT format: https://image.pollinations.ai/prompt/ENCODED_PROMPT?width=1200&height=600&nologo=true
+4. Add a <figcaption> for each image crediting 'NanoBanana Pro'.
+5. Make the content long, detailed, and professional (5-8 paragraphs minimum).`;
+
+            const response = await genAI.models.generateContent({
+                model: model,
+                contents: prompt,
+                config: {
+                    responseMimeType: 'application/json'
                 }
+            });
 
-                For the "content" field:
-                1. Use rich HTML5 tags: <h2>, <h3>, <p>, <ul>/<li>, <blockquote>.
-                2. Style elements with Tailwind CSS classes suitable for a dark mode tech blog (e.g., text-gray-300, text-white, border-primary).
-                3. Include at least 3 images using <figure> tags.
-                4. For image src, use this EXACT format: https://image.pollinations.ai/prompt/ENCODED_PROMPT?width=1200&height=600&nologo=true
-                   Replace ENCODED_PROMPT with a URL-encoded description of the image.
-                5. Add a <figcaption> for each image crediting 'NanoBanana Pro'.
-                6. Make the content long, detailed, and professional.
-            `;
+            console.log("Raw API Response:", response);
 
-            const result = await model.generateContent(prompt);
-            const response = await result.response;
-            const text = response.text();
+            const text = response.text;
+            if (!text) {
+                throw new Error("No content generated from API");
+            }
 
-            console.log("Raw API Response:", text);
+            console.log("Response text:", text);
 
-            // Clean up markdown code blocks if present
-            const jsonString = text.replace(/```json/g, '').replace(/```/g, '').trim();
-
-            console.log("Cleaned JSON string:", jsonString);
-
-            const data = JSON.parse(jsonString);
+            const data = JSON.parse(text);
             console.log("Parsed data:", data);
 
             // Generate a featured image based on the title
