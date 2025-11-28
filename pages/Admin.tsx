@@ -12,7 +12,7 @@ import {
 import { Article } from '../types';
 import AdminSidebar from '../components/AdminSidebar';
 import RichTextEditor from '../components/RichTextEditor';
-import { generateBlogPost, regenerateImage, editImageWithNanoBanana, setApiKey } from '../services/aiService';
+import { generateBlogPost, regenerateImage, editImageWithNanoBanana, setApiKey, BlogGenerationOptions, DEFAULT_GENERATION_OPTIONS } from '../services/aiService';
 
 // Stats Card Component
 const StatCard: React.FC<{
@@ -88,6 +88,10 @@ const Admin: React.FC = () => {
     const [isRegeneratingImage, setIsRegeneratingImage] = useState(false);
     const [editingFeaturedImage, setEditingFeaturedImage] = useState(false);
     const [imageEditMode, setImageEditMode] = useState<'generate' | 'edit'>('edit'); // 'generate' = new image, 'edit' = modify existing
+
+    // Generation Options State
+    const [showGenerationOptions, setShowGenerationOptions] = useState(false);
+    const [generationOptions, setGenerationOptions] = useState<BlogGenerationOptions>(DEFAULT_GENERATION_OPTIONS);
 
     // SEO State
     const [seoScore, setSeoScore] = useState(0);
@@ -215,6 +219,15 @@ const Admin: React.FC = () => {
         }
     };
 
+    const handleOpenGenerationOptions = () => {
+        if (!currentPost.title) return alert('Please enter a topic in the Title field first.');
+        if (!apiKey) {
+            setShowApiKeyInput(true);
+            return alert('Please enter your Gemini API Key first.');
+        }
+        setShowGenerationOptions(true);
+    };
+
     const handleAIGenerate = async () => {
         if (!currentPost.title) return alert('Please enter a topic in the Title field first.');
         if (!apiKey) {
@@ -222,9 +235,11 @@ const Admin: React.FC = () => {
             return alert('Please enter your Gemini API Key first.');
         }
 
+        setShowGenerationOptions(false);
         setIsGenerating(true);
         try {
-            const generated = await generateBlogPost(currentPost.title, apiKey);
+            console.log("🚀 Starting generation with options:", generationOptions);
+            const generated = await generateBlogPost(currentPost.title, apiKey, generationOptions);
             setCurrentPost(prev => ({
                 ...prev,
                 title: generated.title,
@@ -332,6 +347,35 @@ const Admin: React.FC = () => {
 
     const categories = ['Technology', 'AI', 'Innovation', 'Hardware', 'Software', 'Security', 'Startups', 'Reviews'];
 
+    // Generation options configurations
+    const lengthOptions = [
+        { value: 'short', label: 'Short (~500 words)', description: '3 paragraphs, 2 sections' },
+        { value: 'medium', label: 'Medium (~1,000 words)', description: '5 paragraphs, 3 sections' },
+        { value: 'long', label: 'Long (~1,500 words)', description: '8 paragraphs, 4 sections' },
+        { value: 'very-long', label: 'Very Long (~2,000 words)', description: '10 paragraphs, 5 sections' },
+        { value: 'epic', label: 'Epic (~3,000 words)', description: '15 paragraphs, 7 sections' }
+    ];
+
+    const imageCountOptions = [
+        { value: 1, label: '1 Image', description: 'Featured image only' },
+        { value: 2, label: '2 Images', description: 'Featured + 1 inline' },
+        { value: 3, label: '3 Images', description: 'Featured + 2 inline' },
+        { value: 4, label: '4 Images', description: 'Featured + 3 inline' },
+        { value: 5, label: '5 Images', description: 'Featured + 4 inline' },
+        { value: 6, label: '6 Images', description: 'Featured + 5 inline' },
+        { value: 8, label: '8 Images', description: 'Featured + 7 inline' },
+        { value: 10, label: '10 Images', description: 'Featured + 9 inline' }
+    ];
+
+    const postTypeOptions = [
+        { value: 'how-to', label: '📚 How-To / Tutorial', description: 'Step-by-step guide with instructions' },
+        { value: 'review', label: '⭐ Product Review', description: 'Pros, cons, and verdict' },
+        { value: 'news', label: '📰 News / Update', description: 'Latest developments and announcements' },
+        { value: 'opinion', label: '💭 Opinion / Analysis', description: 'Thought leadership and insights' },
+        { value: 'listicle', label: '📋 Listicle', description: 'Numbered list format' },
+        { value: 'case-study', label: '📊 Case Study', description: 'In-depth analysis with results' }
+    ];
+
     const aiSuggestions = [
         { icon: Lightbulb, title: 'Improve Introduction', description: 'Make your opening more engaging and hook readers instantly', action: 'Apply' },
         { icon: Target, title: 'Add Call-to-Action', description: 'Include a compelling CTA to increase engagement', action: 'Generate' },
@@ -341,6 +385,163 @@ const Admin: React.FC = () => {
 
     return (
         <div className="min-h-screen bg-dark-950 pt-20">
+            {/* Generation Options Modal */}
+            {showGenerationOptions && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <div className="absolute inset-0 bg-dark-950/90 backdrop-blur-sm" onClick={() => setShowGenerationOptions(false)} />
+                    <div className="relative glass rounded-2xl p-6 w-full max-w-2xl animate-scale-in max-h-[90vh] overflow-y-auto">
+                        <div className="flex justify-between items-center mb-6">
+                            <div>
+                                <h4 className="text-xl font-display font-bold text-white flex items-center gap-2">
+                                    <Sparkles className="h-6 w-6 text-primary-400" />
+                                    AI Blog Generator
+                                </h4>
+                                <p className="text-sm text-dark-400 mt-1">Configure your blog post settings before generation</p>
+                            </div>
+                            <button onClick={() => setShowGenerationOptions(false)} className="p-2 rounded-lg hover:bg-white/10 text-dark-400 hover:text-white transition-colors">
+                                <X className="h-5 w-5" />
+                            </button>
+                        </div>
+
+                        {/* Topic Display */}
+                        <div className="mb-6 p-4 rounded-xl bg-primary-500/10 border border-primary-500/20">
+                            <div className="flex items-center gap-2 text-sm text-dark-400 mb-1">
+                                <FileText className="h-4 w-4" />
+                                Topic
+                            </div>
+                            <p className="text-white font-medium">{currentPost.title}</p>
+                        </div>
+
+                        {/* Post Type Selection */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-white mb-3 flex items-center gap-2">
+                                <Layers className="h-4 w-4 text-primary-400" />
+                                Post Type
+                            </label>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                {postTypeOptions.map((option) => (
+                                    <button
+                                        key={option.value}
+                                        onClick={() => setGenerationOptions(prev => ({ ...prev, postType: option.value as BlogGenerationOptions['postType'] }))}
+                                        className={`p-4 rounded-xl text-left transition-all ${
+                                            generationOptions.postType === option.value
+                                                ? 'bg-primary-500/20 border-2 border-primary-500'
+                                                : 'glass border border-white/10 hover:border-white/20'
+                                        }`}
+                                    >
+                                        <div className="text-sm font-medium text-white mb-1">{option.label}</div>
+                                        <div className="text-xs text-dark-400">{option.description}</div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Post Length Selection */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-white mb-3 flex items-center gap-2">
+                                <Type className="h-4 w-4 text-accent-cyan" />
+                                Post Length
+                            </label>
+                            <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+                                {lengthOptions.map((option) => (
+                                    <button
+                                        key={option.value}
+                                        onClick={() => setGenerationOptions(prev => ({ ...prev, length: option.value as BlogGenerationOptions['length'] }))}
+                                        className={`p-3 rounded-xl text-center transition-all ${
+                                            generationOptions.length === option.value
+                                                ? 'bg-accent-cyan/20 border-2 border-accent-cyan'
+                                                : 'glass border border-white/10 hover:border-white/20'
+                                        }`}
+                                    >
+                                        <div className="text-sm font-medium text-white">{option.label.split(' ')[0]}</div>
+                                        <div className="text-xs text-dark-400">{option.label.match(/\(([^)]+)\)/)?.[1]}</div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Image Count Selection */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-white mb-3 flex items-center gap-2">
+                                <span className="text-lg">🍌</span>
+                                Nano Banana Pro Images
+                            </label>
+                            <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
+                                {imageCountOptions.map((option) => (
+                                    <button
+                                        key={option.value}
+                                        onClick={() => setGenerationOptions(prev => ({ ...prev, imageCount: option.value }))}
+                                        className={`p-3 rounded-xl text-center transition-all ${
+                                            generationOptions.imageCount === option.value
+                                                ? 'bg-accent-amber/20 border-2 border-accent-amber'
+                                                : 'glass border border-white/10 hover:border-white/20'
+                                        }`}
+                                    >
+                                        <div className="text-lg font-bold text-white">{option.value}</div>
+                                        <div className="text-xs text-dark-400">img{option.value > 1 ? 's' : ''}</div>
+                                    </button>
+                                ))}
+                            </div>
+                            <p className="text-xs text-dark-500 mt-2">
+                                Each image is generated by Nano Banana Pro (gemini-3-pro-image-preview)
+                            </p>
+                        </div>
+
+                        {/* Summary */}
+                        <div className="mb-6 p-4 rounded-xl glass border border-white/10">
+                            <h5 className="text-sm font-medium text-white mb-3">Generation Summary</h5>
+                            <div className="grid grid-cols-3 gap-4 text-center">
+                                <div>
+                                    <div className="text-2xl font-bold text-primary-400">
+                                        {lengthOptions.find(o => o.value === generationOptions.length)?.label.match(/~([\d,]+)/)?.[1] || '1,000'}
+                                    </div>
+                                    <div className="text-xs text-dark-400">words</div>
+                                </div>
+                                <div>
+                                    <div className="text-2xl font-bold text-accent-cyan">
+                                        {generationOptions.imageCount}
+                                    </div>
+                                    <div className="text-xs text-dark-400">images</div>
+                                </div>
+                                <div>
+                                    <div className="text-2xl font-bold text-accent-amber">
+                                        {postTypeOptions.find(o => o.value === generationOptions.postType)?.label.split(' ')[0]}
+                                    </div>
+                                    <div className="text-xs text-dark-400">type</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="flex justify-end gap-3">
+                            <button
+                                onClick={() => setShowGenerationOptions(false)}
+                                className="px-5 py-2.5 text-dark-400 hover:text-white transition-colors"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleAIGenerate}
+                                disabled={isGenerating}
+                                className="btn-primary text-white px-8 py-3 rounded-xl font-semibold flex items-center gap-2 disabled:opacity-50"
+                            >
+                                {isGenerating ? (
+                                    <>
+                                        <Loader2 className="h-5 w-5 animate-spin" />
+                                        Generating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles className="h-5 w-5" />
+                                        Generate Blog Post
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Nano Banana Pro Image Editor Modal */}
             {showImageEditor && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -626,7 +827,7 @@ const Admin: React.FC = () => {
                                             className="flex-1 bg-transparent text-4xl font-display font-bold text-white placeholder-dark-600 outline-none border-b-2 border-transparent focus:border-primary-500 transition-colors pb-2"
                                         />
                                         <button
-                                            onClick={handleAIGenerate}
+                                            onClick={handleOpenGenerationOptions}
                                             disabled={isGenerating}
                                             className="btn-primary text-white px-5 py-3 rounded-xl font-semibold flex items-center gap-2 disabled:opacity-50 h-fit"
                                             title="Generate with AI"
