@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Zap, Twitter, Github, Linkedin, Youtube, Mail, 
-  ArrowRight, Heart, Globe, Sparkles, ExternalLink 
+import {
+  Sparkles, Twitter, Github, Linkedin, Youtube, Mail,
+  ArrowRight, Heart, Globe, ExternalLink, Rss
 } from 'lucide-react';
 
 const Footer: React.FC = () => {
@@ -19,32 +19,26 @@ const Footer: React.FC = () => {
   };
 
   const footerLinks = {
-    product: [
-      { label: 'Features', href: '/services' },
-      { label: 'AI Writer', href: '/admin' },
-      { label: 'Templates', href: '/resources' },
-      { label: 'Pricing', href: '/services' },
-      { label: 'Changelog', href: '/resources' },
+    explore: [
+      { label: 'Latest Articles', href: '/' },
+      { label: 'Categories', href: '/resources' },
+      { label: 'Popular Posts', href: '/' },
+      { label: 'Archives', href: '/resources' },
     ],
-    resources: [
-      { label: 'Documentation', href: '/resources' },
-      { label: 'API Reference', href: '/resources' },
-      { label: 'Blog', href: '/' },
-      { label: 'Community', href: '/contact' },
-      { label: 'Support', href: '/contact' },
+    topics: [
+      { label: 'Artificial Intelligence', href: '/' },
+      { label: 'Technology', href: '/' },
+      { label: 'Innovation', href: '/' },
+      { label: 'Tutorials', href: '/resources' },
     ],
-    company: [
+    about: [
       { label: 'About Us', href: '/about' },
-      { label: 'Careers', href: '/about' },
-      { label: 'Press Kit', href: '/resources' },
       { label: 'Contact', href: '/contact' },
-      { label: 'Partners', href: '/about' },
+      { label: 'Write for Us', href: '/contact' },
     ],
     legal: [
       { label: 'Privacy Policy', href: '/about' },
       { label: 'Terms of Service', href: '/about' },
-      { label: 'Cookie Policy', href: '/about' },
-      { label: 'GDPR', href: '/about' },
     ],
   };
 
@@ -122,22 +116,22 @@ const Footer: React.FC = () => {
             <div className="col-span-2">
               <Link to="/" className="flex items-center space-x-3 group mb-6">
                 <div className="relative">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-accent-cyan flex items-center justify-center">
-                    <Zap className="h-6 w-6 text-white" />
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-accent-violet flex items-center justify-center">
+                    <Sparkles className="h-6 w-6 text-white" />
                   </div>
                 </div>
                 <div className="flex flex-col">
                   <span className="text-xl font-display font-bold text-white">
-                    TechPulse
+                    AI Amplify
                   </span>
                   <span className="text-[10px] font-medium text-dark-500 uppercase tracking-widest">
-                    AI Content Studio
+                    Tech & AI Insights
                   </span>
                 </div>
               </Link>
               
               <p className="text-dark-400 text-sm mb-6 max-w-xs">
-                The ultimate AI-powered platform for creating stunning blog content. Transform your ideas into professional articles in seconds.
+                Your source for the latest insights on artificial intelligence, technology trends, and innovation. Stay informed with quality content.
               </p>
 
               {/* Social Links */}
@@ -155,13 +149,13 @@ const Footer: React.FC = () => {
               </div>
             </div>
 
-            {/* Product Links */}
+            {/* Explore Links */}
             <div>
-              <h4 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Product</h4>
+              <h4 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Explore</h4>
               <ul className="space-y-3">
-                {footerLinks.product.map((link) => (
+                {footerLinks.explore.map((link) => (
                   <li key={link.label}>
-                    <Link 
+                    <Link
                       to={link.href}
                       className="text-sm text-dark-400 hover:text-white transition-colors inline-flex items-center gap-1 group"
                     >
@@ -173,13 +167,13 @@ const Footer: React.FC = () => {
               </ul>
             </div>
 
-            {/* Resources Links */}
+            {/* Topics Links */}
             <div>
-              <h4 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Resources</h4>
+              <h4 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Topics</h4>
               <ul className="space-y-3">
-                {footerLinks.resources.map((link) => (
+                {footerLinks.topics.map((link) => (
                   <li key={link.label}>
-                    <Link 
+                    <Link
                       to={link.href}
                       className="text-sm text-dark-400 hover:text-white transition-colors inline-flex items-center gap-1 group"
                     >
@@ -191,11 +185,11 @@ const Footer: React.FC = () => {
               </ul>
             </div>
 
-            {/* Company Links */}
+            {/* About Links */}
             <div>
-              <h4 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">Company</h4>
+              <h4 className="text-sm font-semibold text-white uppercase tracking-wider mb-4">About</h4>
               <ul className="space-y-3">
-                {footerLinks.company.map((link) => (
+                {footerLinks.about.map((link) => (
                   <li key={link.label}>
                     <Link 
                       to={link.href}
@@ -235,18 +229,18 @@ const Footer: React.FC = () => {
         <div className="container mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2 text-sm text-dark-500">
-              <span>© {new Date().getFullYear()} TechPulse News.</span>
+              <span>© {new Date().getFullYear()} AI Amplify.</span>
               <span className="hidden md:inline">•</span>
               <span className="hidden md:inline">All rights reserved.</span>
             </div>
 
             <div className="flex items-center gap-6">
-              <div className="flex items-center gap-2 text-sm text-dark-500">
-                <Globe className="h-4 w-4" />
-                <span>English (US)</span>
-              </div>
+              <a href="/rss" className="flex items-center gap-2 text-sm text-dark-500 hover:text-white transition-colors">
+                <Rss className="h-4 w-4" />
+                <span>RSS Feed</span>
+              </a>
               <div className="flex items-center gap-1 text-sm text-dark-500">
-                Made with <Heart className="h-4 w-4 text-accent-rose mx-1" /> by TechPulse Team
+                Made with <Heart className="h-4 w-4 text-accent-rose mx-1" /> for tech enthusiasts
               </div>
             </div>
           </div>

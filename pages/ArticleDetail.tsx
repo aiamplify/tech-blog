@@ -139,8 +139,8 @@ const ArticleDetail: React.FC = () => {
                 <User className="h-6 w-6 text-white" />
               </div>
               <div>
-                <p className="text-white font-medium">TechPulse Team</p>
-                <p className="text-dark-400 text-sm">Content Creator</p>
+                <p className="text-white font-medium">AI Amplify</p>
+                <p className="text-dark-400 text-sm">Tech & AI Insights</p>
               </div>
             </div>
           </div>
@@ -248,9 +248,9 @@ const ArticleDetail: React.FC = () => {
                 <User className="h-10 w-10 text-white" />
               </div>
               <div className="flex-1">
-                <h3 className="text-xl font-display font-bold text-white mb-2">TechPulse Team</h3>
+                <h3 className="text-xl font-display font-bold text-white mb-2">AI Amplify</h3>
                 <p className="text-dark-400 mb-4">
-                  We're a team of passionate tech enthusiasts and content creators dedicated to bringing you the latest insights in technology, AI, and innovation.
+                  Exploring the intersection of technology, artificial intelligence, and innovation. Stay updated with the latest trends, tutorials, and insights from the world of tech.
                 </p>
                 <div className="flex items-center gap-3">
                   <button className="btn-primary text-white px-4 py-2 rounded-xl text-sm font-medium">

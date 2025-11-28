@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, Play, Sparkles, TrendingUp, Clock, Eye, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight, Sparkles, TrendingUp, Clock, Eye, ChevronLeft, ChevronRight, BookOpen, Rss } from 'lucide-react';
 import { useArticles } from '../hooks/useArticles';
 
 const Hero: React.FC = () => {
@@ -31,67 +31,64 @@ const Hero: React.FC = () => {
   const article = heroArticles[currentIndex];
   const trendingArticles = gridArticles.slice(0, 3);
 
-  // Empty state
+  // Empty state - Blog welcome message (not app marketing)
   if (!article) {
     return (
-      <section className="relative min-h-[80vh] flex items-center justify-center overflow-hidden">
-        {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute inset-0" style={{
-            backgroundImage: `radial-gradient(circle at 1px 1px, rgba(99, 102, 241, 0.3) 1px, transparent 0)`,
-            backgroundSize: '40px 40px'
-          }} />
-        </div>
-
-        <div className="relative z-10 text-center max-w-3xl mx-auto px-4">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-8 animate-float">
-            <Sparkles className="h-4 w-4 text-primary-400" />
-            <span className="text-sm font-medium text-dark-300">AI-Powered Content Studio</span>
+      <section className="relative overflow-hidden">
+        {/* Welcome Banner */}
+        <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-dark-900 via-dark-850 to-dark-900 border border-white/5">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 opacity-20">
+            <div className="absolute inset-0" style={{
+              backgroundImage: `radial-gradient(circle at 1px 1px, rgba(99, 102, 241, 0.3) 1px, transparent 0)`,
+              backgroundSize: '40px 40px'
+            }} />
           </div>
           
-          <h1 className="text-5xl md:text-7xl font-display font-bold text-white mb-6 leading-tight">
-            Create <span className="text-gradient">Stunning</span> Content with AI
-          </h1>
-          
-          <p className="text-xl text-dark-400 mb-10 max-w-2xl mx-auto leading-relaxed">
-            Transform your ideas into professional blog posts in seconds. Powered by advanced AI, designed for creators.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-            <Link 
-              to="/admin" 
-              className="group flex items-center gap-3 btn-primary text-white px-8 py-4 rounded-2xl font-semibold text-lg"
-            >
-              <Sparkles className="h-5 w-5" />
-              Start Creating
-              <ArrowRight className="h-5 w-5 group-hover:translate-x-1 transition-transform" />
-            </Link>
-            <button className="flex items-center gap-3 px-8 py-4 rounded-2xl font-semibold text-lg text-dark-300 hover:text-white btn-secondary">
-              <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
-                <Play className="h-4 w-4 ml-0.5" />
+          {/* Decorative Elements */}
+          <div className="absolute top-1/4 left-10 w-72 h-72 bg-primary-500/10 rounded-full blur-[100px]" />
+          <div className="absolute bottom-1/4 right-10 w-96 h-96 bg-accent-cyan/10 rounded-full blur-[120px]" />
+
+          <div className="relative z-10 py-16 px-8 md:py-24 md:px-16">
+            <div className="max-w-3xl">
+              {/* Badge */}
+              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass mb-6">
+                <Rss className="h-4 w-4 text-primary-400" />
+                <span className="text-sm font-medium text-dark-300">AI Amplify Blog</span>
               </div>
-              Watch Demo
-            </button>
-          </div>
-
-          {/* Stats */}
-          <div className="mt-16 grid grid-cols-3 gap-8 max-w-lg mx-auto">
-            {[
-              { value: '10K+', label: 'Articles Created' },
-              { value: '50+', label: 'AI Templates' },
-              { value: '99%', label: 'Satisfaction' },
-            ].map((stat) => (
-              <div key={stat.label} className="text-center">
-                <div className="text-3xl font-display font-bold text-gradient mb-1">{stat.value}</div>
-                <div className="text-sm text-dark-500">{stat.label}</div>
+              
+              {/* Title */}
+              <h1 className="text-4xl md:text-5xl lg:text-6xl font-display font-bold text-white mb-6 leading-tight">
+                Welcome to <span className="text-gradient">AI Amplify</span>
+              </h1>
+              
+              {/* Description */}
+              <p className="text-xl text-dark-400 mb-8 max-w-2xl leading-relaxed">
+                Your source for the latest insights on artificial intelligence, technology trends, 
+                and innovation. Discover articles, tutorials, and thought leadership from the world of tech.
+              </p>
+              
+              {/* Features */}
+              <div className="flex flex-wrap gap-6 mb-10">
+                {[
+                  { icon: BookOpen, label: 'In-depth Articles' },
+                  { icon: Sparkles, label: 'AI Insights' },
+                  { icon: TrendingUp, label: 'Tech Trends' },
+                ].map((item) => (
+                  <div key={item.label} className="flex items-center gap-2 text-dark-300">
+                    <item.icon className="h-5 w-5 text-primary-400" />
+                    <span>{item.label}</span>
+                  </div>
+                ))}
               </div>
-            ))}
+
+              {/* CTA - Only for logged in admin */}
+              <p className="text-dark-500 text-sm">
+                No articles yet. Check back soon for new content!
+              </p>
+            </div>
           </div>
         </div>
-
-        {/* Decorative Elements */}
-        <div className="absolute top-1/4 left-10 w-72 h-72 bg-primary-500/20 rounded-full blur-[100px] animate-pulse-slow" />
-        <div className="absolute bottom-1/4 right-10 w-96 h-96 bg-accent-cyan/20 rounded-full blur-[120px] animate-pulse-slow" style={{ animationDelay: '-2s' }} />
       </section>
     );
   }

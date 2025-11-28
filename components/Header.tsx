@@ -69,17 +69,17 @@ const Header: React.FC = () => {
             {/* Logo */}
             <Link to="/" className="flex items-center space-x-3 group">
               <div className="relative">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-accent-cyan flex items-center justify-center transform group-hover:scale-110 transition-transform duration-300">
-                  <Zap className="h-6 w-6 text-white" />
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary-500 to-accent-violet flex items-center justify-center transform group-hover:scale-110 transition-transform duration-300">
+                  <Sparkles className="h-6 w-6 text-white" />
                 </div>
-                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-primary-500 to-accent-cyan blur-lg opacity-50 group-hover:opacity-75 transition-opacity" />
+                <div className="absolute inset-0 rounded-xl bg-gradient-to-br from-primary-500 to-accent-violet blur-lg opacity-50 group-hover:opacity-75 transition-opacity" />
               </div>
               <div className="flex flex-col">
                 <span className="text-xl font-display font-bold text-white group-hover:text-gradient transition-all duration-300">
-                  TechPulse
+                  AI Amplify
                 </span>
                 <span className="text-[10px] font-medium text-dark-400 uppercase tracking-widest">
-                  AI Content Studio
+                  Tech & AI Insights
                 </span>
               </div>
             </Link>
@@ -198,21 +198,22 @@ const Header: React.FC = () => {
                 </>
               )}
 
-              {/* CTA Button */}
+              {/* CTA Button - Only show login for non-authenticated users */}
               {isAuthenticated ? (
-                <Link 
-                  to="/admin" 
+                <Link
+                  to="/admin"
                   className="hidden sm:flex items-center gap-2 btn-primary text-white px-5 py-2.5 rounded-xl font-semibold text-sm"
                 >
                   <Sparkles className="h-4 w-4" />
-                  Create
+                  Create Post
                 </Link>
               ) : (
-                <Link 
-                  to="/login" 
-                  className="hidden sm:flex items-center gap-2 btn-primary text-white px-5 py-2.5 rounded-xl font-semibold text-sm"
+                <Link
+                  to="/login"
+                  className="hidden sm:flex items-center gap-2 glass text-dark-300 hover:text-white px-5 py-2.5 rounded-xl font-medium text-sm transition-colors"
                 >
-                  Get Started
+                  <User className="h-4 w-4" />
+                  Login
                 </Link>
               )}
 
@@ -246,19 +247,20 @@ const Header: React.FC = () => {
               ))}
               <hr className="border-white/10" />
               {isAuthenticated ? (
-                <Link 
-                  to="/admin" 
+                <Link
+                  to="/admin"
                   className="flex items-center justify-center gap-2 btn-primary text-white px-5 py-3 rounded-xl font-semibold"
                 >
                   <Sparkles className="h-4 w-4" />
-                  Open Dashboard
+                  Create Post
                 </Link>
               ) : (
-                <Link 
-                  to="/login" 
-                  className="flex items-center justify-center gap-2 btn-primary text-white px-5 py-3 rounded-xl font-semibold"
+                <Link
+                  to="/login"
+                  className="flex items-center justify-center gap-2 glass text-dark-300 px-5 py-3 rounded-xl font-medium"
                 >
-                  Get Started Free
+                  <User className="h-4 w-4" />
+                  Admin Login
                 </Link>
               )}
             </div>
