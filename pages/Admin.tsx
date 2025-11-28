@@ -153,8 +153,9 @@ const Admin: React.FC = () => {
                 imageUrl: generated.imageUrl,
             }));
         } catch (error) {
-            console.error("AI Generation failed", error);
-            alert("Failed to generate content. Please check your API Key and try again.");
+            console.error("❌ AI Generation failed", error);
+            const errorMessage = error instanceof Error ? error.message : "Unknown error";
+            alert(`Failed to generate content: ${errorMessage}\n\nPlease check the browser console for details.`);
         } finally {
             setIsGenerating(false);
         }
