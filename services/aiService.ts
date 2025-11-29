@@ -385,7 +385,83 @@ SPECIAL INSTRUCTIONS FOR CASE STUDY:
             }
 
             console.log("✅ Parsing JSON response...");
-            const data = JSON.parse(text);
+            console.log("📄 Raw response length:", text.length);
+            
+            // Clean up the response - sometimes the API returns extra content after JSON
+            let cleanedText = text.trim();
+            
+            // Remove markdown code blocks if present
+            if (cleanedText.startsWith('```json')) {
+                cleanedText = cleanedText.slice(7);
+            } else if (cleanedText.startsWith('```')) {
+                cleanedText = cleanedText.slice(3);
+            }
+            if (cleanedText.endsWith('```')) {
+                cleanedText = cleanedText.slice(0, -3);
+            }
+            cleanedText = cleanedText.trim();
+            
+            // Find the JSON object boundaries
+            const firstBrace = cleanedText.indexOf('{');
+            if (firstBrace === -1) {
+                console.error("❌ No JSON object found in response");
+                throw new Error("No JSON object found in API response");
+            }
+            
+            // Find the matching closing brace by counting braces
+            let braceCount = 0;
+            let lastBrace = -1;
+            let inString = false;
+            let escapeNext = false;
+            
+            for (let i = firstBrace; i < cleanedText.length; i++) {
+                const char = cleanedText[i];
+                
+                if (escapeNext) {
+                    escapeNext = false;
+                    continue;
+                }
+                
+                if (char === '\\') {
+                    escapeNext = true;
+                    continue;
+                }
+                
+                if (char === '"' && !escapeNext) {
+                    inString = !inString;
+                    continue;
+                }
+                
+                if (!inString) {
+                    if (char === '{') {
+                        braceCount++;
+                    } else if (char === '}') {
+                        braceCount--;
+                        if (braceCount === 0) {
+                            lastBrace = i;
+                            break;
+                        }
+                    }
+                }
+            }
+            
+            if (lastBrace === -1) {
+                console.error("❌ Could not find matching closing brace");
+                throw new Error("Malformed JSON in API response");
+            }
+            
+            // Extract just the JSON object
+            const jsonString = cleanedText.substring(firstBrace, lastBrace + 1);
+            console.log("📄 Extracted JSON length:", jsonString.length);
+            
+            let data;
+            try {
+                data = JSON.parse(jsonString);
+            } catch (parseError) {
+                console.error("❌ JSON parse error:", parseError);
+                console.error("📄 Attempted to parse:", jsonString.substring(0, 500) + "...");
+                throw new Error(`Failed to parse JSON: ${parseError instanceof Error ? parseError.message : 'Unknown error'}`);
+            }
 
             // Validate required fields
             if (!data.title || !data.content) {
