@@ -195,16 +195,23 @@ const Admin: React.FC = () => {
             updatedPosts = [newPost, ...posts];
         }
 
+        console.log("💾 Saving article:", newPost.title, "with status:", status);
+        console.log("📦 Total posts after save:", updatedPosts.length);
+        console.log("📦 Published posts:", updatedPosts.filter(p => p.status === 'published').length);
+
         setPosts(updatedPosts);
         localStorage.setItem('customArticles', JSON.stringify(updatedPosts));
         setCurrentPost(newPost);
         
         // Dispatch custom event to notify other components (like Home page) that articles have been updated
+        console.log("📢 Dispatching articlesUpdated event...");
         window.dispatchEvent(new CustomEvent('articlesUpdated'));
         
         // Show success message
         if (status === 'published') {
-            alert('Article published successfully! It will now appear on the blog.');
+            alert(`Article "${newPost.title}" published successfully! Navigate to the homepage to see it.`);
+        } else {
+            alert(`Draft saved successfully!`);
         }
     };
 
