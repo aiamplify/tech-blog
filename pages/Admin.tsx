@@ -198,6 +198,14 @@ const Admin: React.FC = () => {
         setPosts(updatedPosts);
         localStorage.setItem('customArticles', JSON.stringify(updatedPosts));
         setCurrentPost(newPost);
+        
+        // Dispatch custom event to notify other components (like Home page) that articles have been updated
+        window.dispatchEvent(new CustomEvent('articlesUpdated'));
+        
+        // Show success message
+        if (status === 'published') {
+            alert('Article published successfully! It will now appear on the blog.');
+        }
     };
 
     const handleDelete = () => {
@@ -207,6 +215,9 @@ const Admin: React.FC = () => {
         setPosts(updatedPosts);
         localStorage.setItem('customArticles', JSON.stringify(updatedPosts));
         handleCreateNew();
+        
+        // Dispatch custom event to notify other components that articles have been updated
+        window.dispatchEvent(new CustomEvent('articlesUpdated'));
     };
 
     const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
