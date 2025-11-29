@@ -7,7 +7,7 @@ import {
     FileText, Image as ImageIcon, Zap, TrendingUp, Clock, Users,
     BarChart3, PenTool, BookOpen, Layers, Target, Hash, Link2,
     Copy, Download, Share2, MoreHorizontal, Plus, X, Check,
-    Lightbulb, MessageSquare, Bot, Palette, Type, List
+    Lightbulb, MessageSquare, Bot, Palette, Type, List, Upload
 } from 'lucide-react';
 import { Article } from '../types';
 import AdminSidebar from '../components/AdminSidebar';
@@ -87,11 +87,12 @@ const Admin: React.FC = () => {
     const [imageEditPrompt, setImageEditPrompt] = useState('');
     const [isRegeneratingImage, setIsRegeneratingImage] = useState(false);
     const [editingFeaturedImage, setEditingFeaturedImage] = useState(false);
-    const [imageEditMode, setImageEditMode] = useState<'generate' | 'edit'>('edit'); // 'generate' = new image, 'edit' = modify existing
+    const [imageEditMode, setImageEditMode] = useState<'generate' | 'edit' | 'upload'>('edit'); // 'generate' = new image, 'edit' = modify existing, 'upload' = upload own image
 
     // Generation Options State
     const [showGenerationOptions, setShowGenerationOptions] = useState(false);
     const [generationOptions, setGenerationOptions] = useState<BlogGenerationOptions>(DEFAULT_GENERATION_OPTIONS);
+    const [blogPrompt, setBlogPrompt] = useState(''); // Full prompt for AI generation
 
     // SEO State
     const [seoScore, setSeoScore] = useState(0);
@@ -220,16 +221,19 @@ const Admin: React.FC = () => {
     };
 
     const handleOpenGenerationOptions = () => {
-        if (!currentPost.title) return alert('Please enter a topic in the Title field first.');
         if (!apiKey) {
             setShowApiKeyInput(true);
             return alert('Please enter your Gemini API Key first.');
+        }
+        // Pre-fill the prompt with the title if it exists
+        if (currentPost.title && !blogPrompt) {
+            setBlogPrompt(`Create a blog post about ${currentPost.title}`);
         }
         setShowGenerationOptions(true);
     };
 
     const handleAIGenerate = async () => {
-        if (!currentPost.title) return alert('Please enter a topic in the Title field first.');
+        if (!blogPrompt.trim()) return alert('Please enter a prompt describing the blog post you want.');
         if (!apiKey) {
             setShowApiKeyInput(true);
             return alert('Please enter your Gemini API Key first.');
@@ -238,8 +242,9 @@ const Admin: React.FC = () => {
         setShowGenerationOptions(false);
         setIsGenerating(true);
         try {
-            console.log("🚀 Starting generation with options:", generationOptions);
-            const generated = await generateBlogPost(currentPost.title, apiKey, generationOptions);
+            console.log("🚀 Starting generation with prompt:", blogPrompt);
+            console.log("📊 Options:", generationOptions);
+            const generated = await generateBlogPost(blogPrompt, apiKey, generationOptions);
             setCurrentPost(prev => ({
                 ...prev,
                 title: generated.title,
@@ -249,12 +254,42 @@ const Admin: React.FC = () => {
                 keywords: generated.tags,
                 imageUrl: generated.imageUrl,
             }));
+            // Clear the prompt after successful generation
+            setBlogPrompt('');
         } catch (error) {
             console.error("AI Generation failed", error);
             const errorMessage = error instanceof Error ? error.message : "Unknown error";
             alert(`Failed to generate content: ${errorMessage}`);
         } finally {
             setIsGenerating(false);
+        }
+    };
+
+    // Handle image upload in the image editor modal
+    const handleImageEditorUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const newImageUrl = reader.result as string;
+                
+                if (editingFeaturedImage) {
+                    // Update featured image
+                    setCurrentPost(prev => ({ ...prev, imageUrl: newImageUrl }));
+                } else if (editingImageSrc) {
+                    // Update inline image in content
+                    const newContent = currentPost.content?.replace(editingImageSrc, newImageUrl);
+                    setCurrentPost(prev => ({ ...prev, content: newContent }));
+                }
+
+                setShowImageEditor(false);
+                setEditingImageSrc(null);
+                setEditingImageIndex(null);
+                setEditingFeaturedImage(false);
+                setImageEditPrompt('');
+                setImageEditMode('edit');
+            };
+            reader.readAsDataURL(file);
         }
     };
 
@@ -403,13 +438,23 @@ const Admin: React.FC = () => {
                             </button>
                         </div>
 
-                        {/* Topic Display */}
-                        <div className="mb-6 p-4 rounded-xl bg-primary-500/10 border border-primary-500/20">
-                            <div className="flex items-center gap-2 text-sm text-dark-400 mb-1">
-                                <FileText className="h-4 w-4" />
-                                Topic
-                            </div>
-                            <p className="text-white font-medium">{currentPost.title}</p>
+                        {/* Prompt Input */}
+                        <div className="mb-6">
+                            <label className="block text-sm font-medium text-white mb-3 flex items-center gap-2">
+                                <MessageSquare className="h-4 w-4 text-primary-400" />
+                                What do you want to write about?
+                            </label>
+                            <textarea
+                                value={blogPrompt}
+                                onChange={(e) => setBlogPrompt(e.target.value)}
+                                placeholder="e.g., 'Create a comprehensive guide about using AI for graphic design, covering tools like Midjourney and DALL-E, with practical tips for beginners...'"
+                                className="w-full input-glass rounded-xl p-4 text-white resize-none"
+                                rows={4}
+                                autoFocus
+                            />
+                            <p className="text-xs text-dark-500 mt-2">
+                                💡 Be specific! Describe the topic, angle, target audience, and any specific points you want covered.
+                            </p>
                         </div>
 
                         {/* Post Type Selection */}
@@ -522,7 +567,7 @@ const Admin: React.FC = () => {
                             </button>
                             <button
                                 onClick={handleAIGenerate}
-                                disabled={isGenerating}
+                                disabled={isGenerating || !blogPrompt.trim()}
                                 className="btn-primary text-white px-8 py-3 rounded-xl font-semibold flex items-center gap-2 disabled:opacity-50"
                             >
                                 {isGenerating ? (
@@ -566,30 +611,40 @@ const Admin: React.FC = () => {
                             <p className="text-xs text-dark-400 mt-1">State-of-the-art image generation and editing</p>
                         </div>
 
-                        {/* Mode Toggle - Edit vs Generate New */}
+                        {/* Mode Toggle - Edit vs Generate New vs Upload */}
                         {editingImageSrc && (
                             <div className="mb-4">
-                                <label className="block text-xs font-medium text-dark-400 mb-2">Mode</label>
+                                <label className="block text-xs font-medium text-dark-400 mb-2">What would you like to do?</label>
                                 <div className="flex gap-2">
                                     <button
                                         onClick={() => setImageEditMode('edit')}
-                                        className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                                        className={`flex-1 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                                             imageEditMode === 'edit'
                                                 ? 'bg-accent-cyan/20 text-accent-cyan border border-accent-cyan/30'
                                                 : 'glass text-dark-400 hover:text-white'
                                         }`}
                                     >
-                                        ✏️ Edit This Image
+                                        ✏️ Edit
                                     </button>
                                     <button
                                         onClick={() => setImageEditMode('generate')}
-                                        className={`flex-1 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                                        className={`flex-1 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
                                             imageEditMode === 'generate'
                                                 ? 'bg-primary-500/20 text-primary-400 border border-primary-500/30'
                                                 : 'glass text-dark-400 hover:text-white'
                                         }`}
                                     >
-                                        🎨 Generate New
+                                        🎨 Generate
+                                    </button>
+                                    <button
+                                        onClick={() => setImageEditMode('upload')}
+                                        className={`flex-1 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${
+                                            imageEditMode === 'upload'
+                                                ? 'bg-accent-emerald/20 text-accent-emerald border border-accent-emerald/30'
+                                                : 'glass text-dark-400 hover:text-white'
+                                        }`}
+                                    >
+                                        📤 Upload
                                     </button>
                                 </div>
                             </div>
@@ -606,34 +661,60 @@ const Admin: React.FC = () => {
                             </div>
                         )}
 
-                        {/* Prompt Input */}
-                        <div className="mb-4">
-                            <label className="block text-xs font-medium text-dark-400 mb-2">
-                                {imageEditMode === 'edit' && editingImageSrc
-                                    ? '✏️ What would you like to change?'
-                                    : '🎨 Describe the image you want'}
-                            </label>
-                            <textarea
-                                value={imageEditPrompt}
-                                onChange={(e) => setImageEditPrompt(e.target.value)}
-                                placeholder={imageEditMode === 'edit' && editingImageSrc
-                                    ? "e.g., 'Make the background blue', 'Add more contrast', 'Remove the text', 'Make it more futuristic'..."
-                                    : "Describe the image you want Nano Banana Pro to generate..."
-                                }
-                                className="w-full input-glass rounded-xl p-4 text-white resize-none"
-                                rows={4}
-                                autoFocus
-                            />
-                            <p className="text-xs text-dark-600 mt-2">
-                                {imageEditMode === 'edit' && editingImageSrc
-                                    ? "Tip: Describe what you want to change about the current image. Be specific!"
-                                    : "Tip: Be specific about style, colors, composition, and mood for best results."
-                                }
-                            </p>
-                        </div>
+                        {/* Upload Section (for upload mode) */}
+                        {imageEditMode === 'upload' && (
+                            <div className="mb-6">
+                                <label className="block text-xs font-medium text-dark-400 mb-2">📤 Upload Your Own Image</label>
+                                <div className="border-2 border-dashed border-white/20 rounded-xl p-8 text-center hover:border-accent-emerald/50 transition-colors">
+                                    <Upload className="h-12 w-12 text-dark-500 mx-auto mb-3" />
+                                    <p className="text-dark-400 mb-3">Drag and drop an image here, or click to browse</p>
+                                    <label className="btn-primary text-white px-6 py-2.5 rounded-xl font-semibold cursor-pointer inline-flex items-center gap-2">
+                                        <Upload className="h-4 w-4" />
+                                        Choose Image
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleImageEditorUpload}
+                                            className="hidden"
+                                        />
+                                    </label>
+                                    <p className="text-xs text-dark-600 mt-3">
+                                        Supports JPG, PNG, GIF, WebP
+                                    </p>
+                                </div>
+                            </div>
+                        )}
 
-                        {/* Quick Edit Suggestions (for edit mode) */}
-                        {imageEditMode === 'edit' && editingImageSrc && (
+                        {/* Prompt Input (for edit and generate modes) */}
+                        {imageEditMode !== 'upload' && (
+                            <div className="mb-4">
+                                <label className="block text-xs font-medium text-dark-400 mb-2">
+                                    {imageEditMode === 'edit' && editingImageSrc
+                                        ? '✏️ What would you like to change?'
+                                        : '🎨 Describe the image you want'}
+                                </label>
+                                <textarea
+                                    value={imageEditPrompt}
+                                    onChange={(e) => setImageEditPrompt(e.target.value)}
+                                    placeholder={imageEditMode === 'edit' && editingImageSrc
+                                        ? "e.g., 'Make the background blue', 'Add more contrast', 'Remove the text', 'Make it more futuristic'..."
+                                        : "Describe the image you want Nano Banana Pro to generate..."
+                                    }
+                                    className="w-full input-glass rounded-xl p-4 text-white resize-none"
+                                    rows={4}
+                                    autoFocus
+                                />
+                                <p className="text-xs text-dark-600 mt-2">
+                                    {imageEditMode === 'edit' && editingImageSrc
+                                        ? "Tip: Describe what you want to change about the current image. Be specific!"
+                                        : "Tip: Be specific about style, colors, composition, and mood for best results."
+                                    }
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Quick Edit Suggestions (for edit mode only) */}
+                        {imageEditMode === 'edit' && editingImageSrc && imageEditMode !== 'upload' && (
                             <div className="mb-4">
                                 <label className="block text-xs font-medium text-dark-400 mb-2">Quick Edits</label>
                                 <div className="flex flex-wrap gap-2">
@@ -659,8 +740,8 @@ const Admin: React.FC = () => {
                             </div>
                         )}
 
-                        {/* Quick Styles (for generate mode) */}
-                        {(imageEditMode === 'generate' || !editingImageSrc) && (
+                        {/* Quick Styles (for generate mode only) */}
+                        {imageEditMode === 'generate' && imageEditMode !== 'upload' && (
                             <div className="mb-6">
                                 <label className="block text-xs font-medium text-dark-400 mb-2">Quick Styles</label>
                                 <div className="flex flex-wrap gap-2">
@@ -678,37 +759,57 @@ const Admin: React.FC = () => {
                         )}
 
                         {/* Actions */}
-                        <div className="flex justify-end gap-3">
-                            <button
-                                onClick={() => {
-                                    setShowImageEditor(false);
-                                    setEditingImageSrc(null);
-                                    setEditingFeaturedImage(false);
-                                    setImageEditPrompt('');
-                                    setImageEditMode('edit');
-                                }}
-                                className="px-4 py-2.5 text-dark-400 hover:text-white transition-colors"
-                            >
-                                Cancel
-                            </button>
-                            <button
-                                onClick={handleUpdateImage}
-                                disabled={isRegeneratingImage || !imageEditPrompt.trim()}
-                                className="btn-primary text-white px-6 py-2.5 rounded-xl font-semibold flex items-center gap-2 disabled:opacity-50"
-                            >
-                                {isRegeneratingImage ? (
-                                    <>
-                                        <Loader2 className="h-4 w-4 animate-spin" />
-                                        {imageEditMode === 'edit' && editingImageSrc ? 'Editing...' : 'Generating...'}
-                                    </>
-                                ) : (
-                                    <>
-                                        <span>🍌</span>
-                                        {imageEditMode === 'edit' && editingImageSrc ? 'Apply Edit' : 'Generate Image'}
-                                    </>
-                                )}
-                            </button>
-                        </div>
+                        {imageEditMode !== 'upload' && (
+                            <div className="flex justify-end gap-3">
+                                <button
+                                    onClick={() => {
+                                        setShowImageEditor(false);
+                                        setEditingImageSrc(null);
+                                        setEditingFeaturedImage(false);
+                                        setImageEditPrompt('');
+                                        setImageEditMode('edit');
+                                    }}
+                                    className="px-4 py-2.5 text-dark-400 hover:text-white transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleUpdateImage}
+                                    disabled={isRegeneratingImage || !imageEditPrompt.trim()}
+                                    className="btn-primary text-white px-6 py-2.5 rounded-xl font-semibold flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    {isRegeneratingImage ? (
+                                        <>
+                                            <Loader2 className="h-4 w-4 animate-spin" />
+                                            {imageEditMode === 'edit' && editingImageSrc ? 'Editing...' : 'Generating...'}
+                                        </>
+                                    ) : (
+                                        <>
+                                            <span>🍌</span>
+                                            {imageEditMode === 'edit' && editingImageSrc ? 'Apply Edit' : 'Generate Image'}
+                                        </>
+                                    )}
+                                </button>
+                            </div>
+                        )}
+
+                        {/* Cancel button for upload mode */}
+                        {imageEditMode === 'upload' && (
+                            <div className="flex justify-end">
+                                <button
+                                    onClick={() => {
+                                        setShowImageEditor(false);
+                                        setEditingImageSrc(null);
+                                        setEditingFeaturedImage(false);
+                                        setImageEditPrompt('');
+                                        setImageEditMode('edit');
+                                    }}
+                                    className="px-4 py-2.5 text-dark-400 hover:text-white transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}
